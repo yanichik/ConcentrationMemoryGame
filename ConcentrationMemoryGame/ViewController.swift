@@ -7,7 +7,7 @@
 
 import UIKit
 
-enum Difficulty {
+enum Difficulty: Int, CaseIterable {
     case Easy, Medium, Hard
 }
 
@@ -53,17 +53,17 @@ private extension ViewController {
     }
     func setup() {
         view.backgroundColor = .greenSea()
-        createButton(title: .easy, color: ButtonColor.emerald.color, centerMultiplier: ButtonLayout.easyButtonCenterYMultiplier, action: #selector(onEasyTapped(sender:)))
-        createButton(title: .medium, color: ButtonColor.sunFlower.color, centerMultiplier: ButtonLayout.mediumButtonCenterYMultiplier, action: #selector(onMediumTapped(sender:)))
-        createButton(title: .hard, color: ButtonColor.alizarin.color, centerMultiplier: ButtonLayout.hardButtonCenterYMultiplier, action: #selector(onHardTapped(sender:)))
+        createButton(title: .easy, color: ButtonColor.emerald.color, centerMultiplier: ButtonLayout.easyButtonCenterYMultiplier, difficulty: .Easy)
+        createButton(title: .medium, color: ButtonColor.sunFlower.color, centerMultiplier: ButtonLayout.mediumButtonCenterYMultiplier, difficulty: .Medium)
+        createButton(title: .hard, color: ButtonColor.alizarin.color, centerMultiplier: ButtonLayout.hardButtonCenterYMultiplier, difficulty: .Hard)
     }
     
-    private func createButton(title: ButtonTitle, color: UIColor, centerMultiplier: CGFloat, action: Selector) {
+    private func createButton(title: ButtonTitle, color: UIColor, centerMultiplier: CGFloat, difficulty: Difficulty) {
         let center = CGPoint(x: view.center.x, y: view.center.y * centerMultiplier)
-        buildBtnWithCenter(center: center, title: title, color: color, action: action)
+        buildBtnWithCenter(center: center, title: title, color: color, difficulty: difficulty)
     }
     
-    func buildBtnWithCenter(center: CGPoint, title: ButtonTitle, color:UIColor, action: Selector) {
+    func buildBtnWithCenter(center: CGPoint, title: ButtonTitle, color:UIColor, difficulty: Difficulty) {
         // TODO: build button
         let button = UIButton()
         button.setTitle(title.rawValue, for: .normal)
@@ -72,24 +72,18 @@ private extension ViewController {
         button.frame = CGRect(origin: CGPoint(x: 0, y: 0), size: CGSize(width: ButtonLayout.buttonWidth, height: ButtonLayout.buttonHeight))
         button.center = center
         button.backgroundColor = color
+        button.tag = difficulty.rawValue
         
-        button.addTarget(self, action: action, for: .touchUpInside)
+        button.addTarget(self, action: #selector(onDifficultyTapped(sender:)), for: .touchUpInside)
         view.addSubview(button)
     }
 }
 
 // MARK: - Menu Button Actions
 extension ViewController {
-    @objc func onEasyTapped(sender: UIButton) {
-        newGameDifficulty(.Easy)
-    }
-    
-    @objc func onMediumTapped(sender: UIButton) {
-        newGameDifficulty(.Medium)
-    }
-    
-    @objc func onHardTapped(sender: UIButton) {
-        newGameDifficulty(.Hard)
+    @objc func onDifficultyTapped(sender: UIButton) {
+        guard sender.tag < Difficulty.allCases.count else { return }
+        newGameDifficulty(Difficulty.allCases[sender.tag])
     }
     
     func newGameDifficulty(_ difficulty: Difficulty) {
