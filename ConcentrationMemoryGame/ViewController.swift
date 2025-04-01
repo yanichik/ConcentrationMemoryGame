@@ -88,8 +88,8 @@ extension ViewController {
     
     func newGameDifficulty(_ difficulty: Difficulty) {
         let gameDifficultyViewController = MemoryViewController(difficulty: difficulty)
-        present(gameDifficultyViewController, animated: true, completion: nil)
-//        navigationController?.pushViewController(gameDifficultyViewController, animated: true)
+//        present(gameDifficultyViewController, animated: true, completion: nil)
+        navigationController?.pushViewController(gameDifficultyViewController, animated: true)
     }
 }
 

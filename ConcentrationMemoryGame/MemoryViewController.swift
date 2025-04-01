@@ -15,15 +15,15 @@ class MemoryViewController: UIViewController {
     private var selectedIndexes = [IndexPath]()
     private var numberOfPairs = 0
     private var score = 0
+    private var covHeight: CGFloat = 0
+    private var covWidth: CGFloat = 0
     
     init(difficulty: Difficulty) {
         self.difficulty = difficulty
         deck = Deck()
         super.init(nibName: nil, bundle: nil)
+        print("after super.init safe area insets: \(view.safeAreaInsets)")
         deck = createDeck(numCards: numCardsNeededDifficulty(difficult: difficulty))
-        for i in 0..<deck.count {
-            print("The card at index [\(i)] is [\(deck[i].description)]")
-        }
     }
     
     required init?(coder: NSCoder) {
@@ -35,13 +35,38 @@ class MemoryViewController: UIViewController {
     }
     
     override func viewDidLoad() {
+        print("viewDidLoad safe area insets: \(view.safeAreaInsets)")
         super.viewDidLoad()
+        print("after super.viewDidLoad safe area insets: \(view.safeAreaInsets)")
         setup()
         start()
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        print("viewWillAppear safe area insets: \(view.safeAreaInsets)")
+        super.viewWillAppear(animated)
+        print("after super.viewWillAppear safe area insets: \(view.safeAreaInsets)")
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        print("viewDidAppear safe area insets: \(view.safeAreaInsets)")
+        super.viewDidAppear(animated)
+        print("after super.viewDidAppear safe area insets: \(view.safeAreaInsets)")
+    }
+    
+    override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+    }
+    
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        collectionView.collectionViewLayout.invalidateLayout()
+        let space: CGFloat = 5  // empty space between cards
+        let layout = layoutCardSize(cardSize: cardSize(difficulty: difficulty, space: space), space: space)
+        collectionView.setCollectionViewLayout(layout, animated: true)
+    }
+    
     private func start() {
-//        deck = [Int].init(repeating: 1, count: numCardsNeededDifficulty(difficult: difficulty))
         deck = createDeck(numCards: numCardsNeededDifficulty(difficult: difficulty))
         collectionView.reloadData()
     }
@@ -56,21 +81,23 @@ class MemoryViewController: UIViewController {
 // MARK: - Collection View Setup
 private extension MemoryViewController {
     func setup() {
-        view.backgroundColor = .greenSea()
-        
-        let space: CGFloat = 5  // empty space between cards
-        let (covWidth, covHeight) = collectionViewSizeDifficulty(difficulty: difficulty, space: space)
-        let layout = layoutCardSize(cardSize: cardSizeDifficulty(difficulty: difficulty, space: space), space: space)
-        
-        collectionView = UICollectionView(frame: CGRect(x: 0, y: 0, width: covWidth, height: covHeight), collectionViewLayout: layout)
-        collectionView.center = view.center
-        collectionView.dataSource = self
-        collectionView.delegate = self
-        collectionView.isScrollEnabled = false
-        collectionView.register(CardCell.self, forCellWithReuseIdentifier: "cardCell")
-        collectionView.backgroundColor = .clear
-        
-        view.addSubview(collectionView)
+        if collectionView == nil {
+            view.backgroundColor = .greenSea()
+            
+            let space: CGFloat = 5  // empty space between cards
+            (covWidth, covHeight) = collectionViewSize(difficulty: difficulty, space: space)
+            let layout = layoutCardSize(cardSize: cardSize(difficulty: difficulty, space: space), space: space)
+            
+            collectionView = UICollectionView(frame: CGRect(x: 0, y: 0, width: covWidth, height: covHeight), collectionViewLayout: layout)
+            collectionView.center = view.center
+            collectionView.dataSource = self
+            collectionView.delegate = self
+            collectionView.isScrollEnabled = false
+            collectionView.register(CardCell.self, forCellWithReuseIdentifier: "cardCell")
+            collectionView.backgroundColor = .clear
+            
+            view.addSubview(collectionView)
+        }
     }
     
     func layoutCardSize(cardSize: (cardWidth: CGFloat, cardHeight: CGFloat), space: CGFloat) -> UICollectionViewFlowLayout {
@@ -81,21 +108,20 @@ private extension MemoryViewController {
         return layout
     }
     
-    func collectionViewSizeDifficulty(difficulty: Difficulty, space: CGFloat) -> (CGFloat, CGFloat) {
+    func collectionViewSize(difficulty: Difficulty, space: CGFloat) -> (CGFloat, CGFloat) {
         let (columns, rows) = sizeDifficulty(difficulty: difficulty)
-        let (cardWidth, cardHeight) = cardSizeDifficulty(difficulty: difficulty, space: space)
-        
+        let (cardWidth, cardHeight) = cardSize(difficulty: difficulty, space: space)
         let covWidth = columns * (cardWidth + 2 * space)
         let covHeight = rows * (cardHeight + space)
-//        let covHeight = rows * (cardHeight + 2 * space)
         return (covWidth, covHeight)
         
     }
     
-    func cardSizeDifficulty(difficulty: Difficulty, space: CGFloat) -> (CGFloat, CGFloat) {
+    func cardSize(difficulty: Difficulty, space: CGFloat) -> (CGFloat, CGFloat) {
         let lengthWidthRatio: CGFloat = 1.5
         let (_, rows) = sizeDifficulty(difficulty: difficulty)
-        let cardHeight: CGFloat = view.frame.height / rows - 2 * space
+        let safeAreaInsetsHeight = view.safeAreaLayoutGuide.layoutFrame.height
+        let cardHeight: CGFloat = (safeAreaInsetsHeight) / rows - 2 * space
         let cardWidth: CGFloat = cardHeight / lengthWidthRatio
         return (cardWidth, cardHeight)
     }
