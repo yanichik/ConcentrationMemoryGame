@@ -17,6 +17,9 @@ class MemoryViewController: UIViewController {
     private var score = 0
     private var covHeight: CGFloat = 0
     private var covWidth: CGFloat = 0
+    private var timerLabel = UILabel()
+    private var timer: Timer?
+    private var timerCount: Double = 0.00
     
     init(difficulty: Difficulty) {
         self.difficulty = difficulty
@@ -38,8 +41,10 @@ class MemoryViewController: UIViewController {
         print("viewDidLoad safe area insets: \(view.safeAreaInsets)")
         super.viewDidLoad()
         print("after super.viewDidLoad safe area insets: \(view.safeAreaInsets)")
-        setup()
+        setupCollectionView()
         start()
+        setupTimer()
+        startTimer()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -58,12 +63,55 @@ class MemoryViewController: UIViewController {
         super.viewWillLayoutSubviews()
     }
     
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        collectionView.collectionViewLayout.invalidateLayout()
-        let space: CGFloat = 5  // empty space between cards
-        let layout = layoutCardSize(cardSize: cardSize(difficulty: difficulty, space: space), space: space)
-        collectionView.setCollectionViewLayout(layout, animated: true)
+//    override func viewSafeAreaInsetsDidChange() {
+//        super.viewSafeAreaInsetsDidChange()
+//        collectionView.collectionViewLayout.invalidateLayout()
+//        let space: CGFloat = 5  // empty space between cards
+//        let layout = layoutCardSize(cardSize: cardSize(difficulty: difficulty, space: space), space: space)
+//        collectionView.setCollectionViewLayout(layout, animated: true)
+//        collectionView.reloadData()
+//    }
+//    override func viewSafeAreaInsetsDidChange() {
+//        super.viewSafeAreaInsetsDidChange()
+//        collectionView.collectionViewLayout.invalidateLayout()
+//        collectionView.reloadData()
+//    }
+//    
+//    override func viewDidLayoutSubviews() {
+//        super.viewDidLayoutSubviews()
+//        collectionView.collectionViewLayout.invalidateLayout()
+//    }
+
+
+    
+//    override func viewDidLayoutSubviews() {
+//        setupCollectionView()
+//        start()
+//    }
+    
+    private func setupTimer() {
+        navigationItem.titleView = timerLabel
+    }
+    
+    private func startTimer() {
+        /*
+         config timer label
+         start timer
+         */
+        timerLabel.text = "0.00"
+        timerLabel.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            timerLabel.widthAnchor.constraint(equalToConstant: 100),
+            timerLabel.heightAnchor.constraint(equalToConstant: 20)
+        ])
+        timer = Timer.scheduledTimer(timeInterval: 0.01, target: self, selector: #selector(fireTimer), userInfo: nil, repeats: true)
+        
+    }
+    
+    @objc func fireTimer() {
+        timerCount += 0.01
+        timerLabel.text = String(format: "%.2f", timerCount)
+        print(String(format: "%.2f", timerCount))
     }
     
     private func start() {
@@ -73,14 +121,14 @@ class MemoryViewController: UIViewController {
     
     private func createDeck(numCards: Int) -> Deck{
         let fullDeck = Deck.full().shuffled()
-        let halfDeck = fullDeck.deckOfNumberOfCards(num: numCards/2)
-        return (halfDeck + halfDeck).shuffled()
+        let halfDeck = fullDeck.deckOfNumberOfCards(num: numCards/2).shuffled()
+        return (halfDeck + halfDeck)
     }
 }
 
 // MARK: - Collection View Setup
 private extension MemoryViewController {
-    func setup() {
+    func setupCollectionView() {
         if collectionView == nil {
             view.backgroundColor = .greenSea()
             
@@ -88,23 +136,32 @@ private extension MemoryViewController {
             (covWidth, covHeight) = collectionViewSize(difficulty: difficulty, space: space)
             let layout = layoutCardSize(cardSize: cardSize(difficulty: difficulty, space: space), space: space)
             
-            collectionView = UICollectionView(frame: CGRect(x: 0, y: 0, width: covWidth, height: covHeight), collectionViewLayout: layout)
+            collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
             collectionView.center = view.center
             collectionView.dataSource = self
             collectionView.delegate = self
             collectionView.isScrollEnabled = false
             collectionView.register(CardCell.self, forCellWithReuseIdentifier: "cardCell")
             collectionView.backgroundColor = .clear
+            self.edgesForExtendedLayout = .all
             
             view.addSubview(collectionView)
+            collectionView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                collectionView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+                collectionView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+                collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+                collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            ])
         }
     }
     
     func layoutCardSize(cardSize: (cardWidth: CGFloat, cardHeight: CGFloat), space: CGFloat) -> UICollectionViewFlowLayout {
         let layout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
         layout.sectionInset = UIEdgeInsets(top: space, left: space, bottom: space, right: space)
-        layout.itemSize = CGSize(width: cardSize.cardWidth, height: cardSize.cardHeight)
+//        layout.itemSize = CGSize(width: cardSize.cardWidth, height: cardSize.cardHeight)
         layout.minimumLineSpacing = space
+        layout.minimumInteritemSpacing = space
         return layout
     }
     
@@ -190,6 +247,7 @@ extension MemoryViewController: UICollectionViewDelegate {
 extension MemoryViewController {
     func checkIfFinished() {
         if numberOfPairs == deck.count / 2 {
+            timer?.invalidate()
             showFinalPopUp()
         }
     }
@@ -224,5 +282,22 @@ extension MemoryViewController {
             let cardCell = collectionView.cellForItem(at: index) as! CardCell
             cardCell.downturn()
         }
+    }
+}
+
+extension MemoryViewController: UICollectionViewDelegateFlowLayout {
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        /*
+         safe size width and height
+         interitem space
+         line space
+         */
+        let space: CGFloat = 5
+        let (cols, rows) = sizeDifficulty(difficulty: difficulty)
+        let safeHeight = view.safeAreaLayoutGuide.layoutFrame.height
+        let safeWidth = view.safeAreaLayoutGuide.layoutFrame.width
+        let itemHeight = (safeHeight - rows * space * 2) / rows
+        let itemWidgth = (safeWidth - cols * space * 2) / cols
+        return CGSize(width: itemWidgth, height: itemHeight)
     }
 }
